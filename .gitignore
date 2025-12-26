@@ -1,0 +1,29 @@
+# ===========================
+# 1. TEMPORARY BUILD FILES (Must Ignore)
+# ===========================
+/build/
+.gradle/
+/out/
+/bin/
+
+# ===========================
+# 2. INTELLIJ / IDE SETTINGS
+# ===========================
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# ===========================
+# 3. SECRETS & KEYS (Strict Security)
+# ===========================
+*.pem
+secrets.properties
+application-prod.properties
+
+# ===========================
+# 4. OS JUNK FILES
+# ===========================
+.DS_Store
+Thumbs.db
+HELP.md

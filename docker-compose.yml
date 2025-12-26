@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15
+    container_name: pokemon-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: a400640066  # Must match your application.properties!
+      TZ: Asia/Hong_Kong
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # This saves data locally so it survives restarts
+
+volumes:
+  postgres_data:
