@@ -77,6 +77,10 @@ jobs:
               --spring.datasource.username=dbMaster \
               --spring.datasource.password=${{ secrets.PROD_DB_PASSWORD }} \
               > app.log 2>&1 < /dev/null &
+            
+            # 3. CRITICAL: Give it a moment to detach, then force exit
+            sleep 2
+            exit 0
 
       # ---------------------------------------------------------
       # STEP D: Revoke Access (Cleanup)
