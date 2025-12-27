@@ -1,0 +1,60 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Download your code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. Set up Java (JDK 21)
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      # 3. Build the JAR file (Skip tests to save time for now)
+      - name: Build with Gradle
+        run: ./gradlew bootJar -x test
+
+      # 4. Copy JAR to EC2 (Using your Secrets)
+      - name: Copy JAR to EC2
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          source: "build/libs/*.jar"
+          target: "/home/ec2-user/app"
+          strip_components: 2 # Removes 'build/libs/' from the path so it lands directly in app/
+
+      # 5. SSH into EC2 and Restart the Server
+      - name: Restart Server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            # Stop the old process (if running)
+            echo "Stopping old server..."
+            pkill -f 'pokemoncard' || true
+            
+            # Wait a moment
+            sleep 5
+            
+            # Start the new server in the background (nohup)
+            # We inject the REAL Database URL and Password here from Secrets
+            echo "Starting new server..."
+            nohup java -jar /home/ec2-user/app/pokemoncard.server-0.0.1-SNAPSHOT.jar \
+              --spring.datasource.url=jdbc:postgresql://pokemon-db-prod.c3qewmi46ipv.ap-southeast-2.rds.amazonaws.com:5432/postgres \
+              --spring.datasource.username=${{ secrets.PROD_DB_USER }} \
+              --spring.datasource.password=${{ secrets.PROD_DB_PASSWORD }} \
+              > app.log 2>&1 &
