@@ -71,25 +71,35 @@ jobs:
           key: ${{ secrets.EC2_KEY }}
           script: |
             # -------------------------------------------------------
-            # 1. STOPPING THE OLD SERVER (Safely)
+            # 1. THE "ZOMBIE KILLER" (Check Port 8080 directly)
             # -------------------------------------------------------
-            # We look for a file named 'pid.txt' which holds the ID of the running server.
-            if [ -f pid.txt ]; then
-              OLD_PID=$(cat pid.txt)
-              echo "Found old server with PID: $OLD_PID. Killing it..."
-              kill $OLD_PID || true
+            # Find the ID of whatever process is listening on Port 8080
+            PORT_PID=$(lsof -t -i:8080 || true)
+            
+            if [ -z "$PORT_PID" ]; then
+              echo "Port 8080 is free. No zombie server found."
             else
-              echo "No pid.txt found. Assuming first deployment."
+              echo "Found process $PORT_PID holding Port 8080. Killing it..."
+              kill -9 $PORT_PID
+              sleep 2
             fi
             
-            sleep 5
+            # Double check: Remove old pid.txt just in case
+            rm pid.txt || true
+            
+            # -------------------------------------------------------
+            # 2. START NEW SERVER
+            # -------------------------------------------------------
             nohup java -jar /home/ec2-user/app/pokemoncard.server-0.0.1-SNAPSHOT.jar \
               --spring.datasource.url=jdbc:postgresql://pokemon-db-prod.c3qewmi46ipv.ap-southeast-2.rds.amazonaws.com:5432/postgres \
-              --spring.datasource.username=${{ secrets.PROD_DB_USER }} \
+              --spring.datasource.username=dbMaster \
               --spring.datasource.password=${{ secrets.PROD_DB_PASSWORD }} \
               > app.log 2>&1 < /dev/null &
             
-            # 3. CRITICAL: Give it a moment to detach, then force exit
+            echo "New server started with PID: $!"
+            echo $! > pid.txt
+            
+            # Allow start time
             sleep 2
             exit 0
 
